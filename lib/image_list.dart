@@ -19,7 +19,7 @@ class _ImaeListState extends State<ImaeList> {
   late http.Client _client;
   List<ImageModel> _imageList = [];
   int _imageCount = 10;
-  int _startIndex = 0;
+  int _startIndex = 1;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -27,12 +27,11 @@ class _ImaeListState extends State<ImaeList> {
     super.initState();
     _client = http.Client();
     _loadImages(_startIndex);
-    _scrollController.addListener(() {
+    _scrollController.addListener(() { // This listener is used to trigger load images function when the user reaches to the end of the list
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
         _startIndex += _imageCount;
         _loadImages(_startIndex);
-        // Load more data
       }
     });
   }
@@ -43,19 +42,11 @@ class _ImaeListState extends State<ImaeList> {
     super.dispose();
   }
 
+  // This function is used to load the images in a finite loop
   void _loadImages(int startIndex) async {
-    // for (var i = 1; i <= _imageCount; i++) {
-    //   final data =
-    //       await _client.get(Uri.https('www.xkcd.com', '/$i/info.0.json'));
-    //   final Map<String, dynamic> body = jsonDecode(data.body);
-    //   ImageModel image = ImageModel(image: body['img'], title: body['title']);
-    //   _imageList.add(image);
-    // }
-    // print(_imageList);
-    // setState(() {});
     for (var i = startIndex; i <= startIndex + _imageCount; i++) {
       await context.read<ImageCubit>().getImage(i: i);
-      await Future.delayed(const Duration(milliseconds: 500));
+      // await Future.delayed(const Duration(milliseconds: 500));  // can use this code if want to add some delay between request calls of 2 images 
     }
   }
 
@@ -71,42 +62,64 @@ class _ImaeListState extends State<ImaeList> {
           }
         },
         builder: (context, state) {
-          return _imageList.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                controller: _scrollController,
-                  itemCount: _imageList.length,
-                  itemBuilder: (context, index) => Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          context.read<ImageDetailProvider>().setImageDetail(
-                              _imageList[index].title, _imageList[index].image);
-                          Navigator.pushNamed(
-                            context,
-                            ImageScreen.routeName,
-                          );
-                        },
-                        child: Container(
-                          height: 200,
-                          width: 200,
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                                image: NetworkImage(
-                                  _imageList[index].image,
-                                ),
-                                fit: BoxFit.fill),
-                          ),
+          return state is LoadImageError //Error handling
+              ? Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          "Error While Loading Image. Reason: ${state.message}",
+                          softWrap: true,
                         ),
                       ),
-                      const SizedBox(
-                        height: 10,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: ElevatedButton(
+                        onPressed: () => _loadImages(_startIndex),
+                        child: Text("Reload Images"),
                       ),
-                      Text(_imageList[index].title)
-                    ],
-                  ),
-                );
+                    )
+                  ],
+                )
+              : _imageList.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      controller: _scrollController,
+                      itemCount: _imageList.length,
+                      itemBuilder: (context, index) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              context
+                                  .read<ImageDetailProvider>()
+                                  .setImageDetail(_imageList[index].title,
+                                      _imageList[index].image);
+                              Navigator.pushNamed(
+                                context,
+                                ImageScreen.routeName,
+                              );
+                            },
+                            child: Container(
+                              height: MediaQuery.of(context).size.height/4,
+                              width: MediaQuery.of(context).size.height/4,
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                    image: NetworkImage(
+                                      _imageList[index].image,
+                                    ),
+                                    fit: BoxFit.fill),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          Text(_imageList[index].title)
+                        ],
+                      ),
+                    );
         },
       ),
     );
