@@ -2,15 +2,15 @@
 
 A new Flutter project.
 
-## Getting Started
+## Files' functionality:
+lib\api\image_detail_api.dart: to connect with external apis
 
-This project is a starting point for a Flutter application.
+lib\cubit\image_cubit.dart: to maintain the states while fetching the image data
 
-A few resources to get you started if this is your first Flutter project:
+lib\utils\urls.dart: to list down all the urls
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+lib\provider\image_detail_provider.dart: to store the data related to image tapped to pass it over to next screen
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Features added
+Added scrollcontroller to check if user has reached to the end of the list to load next 10 images
+

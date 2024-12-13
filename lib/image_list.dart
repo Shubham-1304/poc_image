@@ -6,6 +6,7 @@ import 'package:poc_image/cubit/image_cubit.dart';
 import 'package:poc_image/image_screen.dart';
 import 'package:poc_image/model/image_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:poc_image/provider/image_detail_provider.dart';
 
 class ImaeList extends StatefulWidget {
   const ImaeList({super.key});
@@ -18,15 +19,31 @@ class _ImaeListState extends State<ImaeList> {
   late http.Client _client;
   List<ImageModel> _imageList = [];
   int _imageCount = 10;
+  int _startIndex = 0;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _client = http.Client();
-    _loadImages();
+    _loadImages(_startIndex);
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        _startIndex += _imageCount;
+        _loadImages(_startIndex);
+        // Load more data
+      }
+    });
   }
 
-  void _loadImages() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadImages(int startIndex) async {
     // for (var i = 1; i <= _imageCount; i++) {
     //   final data =
     //       await _client.get(Uri.https('www.xkcd.com', '/$i/info.0.json'));
@@ -36,9 +53,9 @@ class _ImaeListState extends State<ImaeList> {
     // }
     // print(_imageList);
     // setState(() {});
-    for (var i = 1; i <= _imageCount; i++) {
+    for (var i = startIndex; i <= startIndex + _imageCount; i++) {
       await context.read<ImageCubit>().getImage(i: i);
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
     }
   }
 
@@ -47,10 +64,7 @@ class _ImaeListState extends State<ImaeList> {
     return Scaffold(
       body: BlocConsumer<ImageCubit, ImageState>(
         listener: (context, state) async {
-          if (state is ImageInitial){
-            _loadImages();
-          }
-          else if (state is ImageLoaded) {
+          if (state is ImageLoaded) {
             _imageList.add(state.image);
           } else if (state is LoadImageError) {
             print("Something Went Wrong");
@@ -58,19 +72,22 @@ class _ImaeListState extends State<ImaeList> {
         },
         builder: (context, state) {
           return _imageList.isEmpty
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : ListView.builder(
+                controller: _scrollController,
                   itemCount: _imageList.length,
                   itemBuilder: (context, index) => Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       GestureDetector(
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          ImageScreen.routeName,
-                          arguments: ScreenArguments(
-                              _imageList[index].title, _imageList[index].image),
-                        ),
+                        onTap: () {
+                          context.read<ImageDetailProvider>().setImageDetail(
+                              _imageList[index].title, _imageList[index].image);
+                          Navigator.pushNamed(
+                            context,
+                            ImageScreen.routeName,
+                          );
+                        },
                         child: Container(
                           height: 200,
                           width: 200,
@@ -83,7 +100,7 @@ class _ImaeListState extends State<ImaeList> {
                           ),
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       Text(_imageList[index].title)
